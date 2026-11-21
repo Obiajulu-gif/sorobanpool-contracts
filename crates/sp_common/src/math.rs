@@ -145,6 +145,21 @@ mod test {
         }
     }
 
+    #[test]
+    fn allocation_preserves_commit_order_for_leftovers() {
+        let units = [60u32, 60, 100, 200];
+        let total: u32 = units.iter().sum();
+        let mut cumulative = 0;
+        let mut allocations = Vec::new();
+
+        for units in units {
+            allocations.push(cumulative_alloc(cumulative, units, 350, total).unwrap());
+            cumulative += units;
+        }
+
+        assert_eq!(allocations, vec![50, 50, 83, 167]);
+    }
+
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(10_000))]
         #[test]
