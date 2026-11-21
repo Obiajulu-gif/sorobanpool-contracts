@@ -7,7 +7,8 @@ use sp_common::clients::{BondClient, ConfigClient, RegistryClient, ReputationCli
 use sp_common::events::emit;
 use sp_common::keys;
 use sp_common::math::{
-    bp_of, ceiling_price, cumulative_alloc, final_unit_price, tier_index, validate_tiers,
+    bp_of, ceiling_price, cumulative_alloc, final_unit_price,
+    round_supplier_payable, tier_index, validate_tiers,
 };
 use sp_common::ttl::bump_persistent;
 use sp_common::types::{Commitment, Params, Pool, PoolState, PoolTerms, Role, Status};
@@ -277,8 +278,8 @@ fn refund_amount(env: &Env, pool: &Pool, c: &Commitment) -> i128 {
 
 /// Fees and supplier net for releasing `amount` to the supplier.
 fn split_payable(env: &Env, pool: &Pool, amount: i128) -> (i128, i128, i128) {
-    let org = ck(env, bp_of(amount, pool.organizer_fee_bp));
-    let plat = ck(env, bp_of(amount, pool.platform_fee_bp));
+    let org = ck(env, round_supplier_payable(amount, pool.organizer_fee_bp));
+    let plat = ck(env, round_supplier_payable(amount, pool.platform_fee_bp));
     (amount - org - plat, plat, org)
 }
 

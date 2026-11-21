@@ -76,6 +76,7 @@ jobs:
       - name: line coverage floor (brief 6.8 asks 90% on group_buy, disputes, supplier_bond)
         run: |
           cargo llvm-cov --workspace --summary-only --json --output-path cov.json
+          python3 scripts/coverage_summary.py cov.json
           python3 - <<'PY'
           import json,sys
           bad=[]

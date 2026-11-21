@@ -1,6 +1,18 @@
 # Error codes
 
-Generated from the `Error` enums in each contract (namespaced: config 100s, registry 200s, group_buy 300s, disputes 400s, supplier_bond 500s, reputation 600s). The frontend maps every code to plain-language EN and Pidgin text.
+Generated from the `Error` enums in each contract. The export script rejects duplicate codes and codes outside these namespaces:
+
+| Contract | Range |
+|---|---:|
+| config | 100–199 |
+| registry | 200–299 |
+| group_buy | 300–399 |
+| disputes | 400–499 |
+| supplier_bond | 500–599 |
+| reputation | 600–699 |
+| smart_wallet | 700–799 |
+
+The frontend maps every code to plain-language EN and Pidgin text.
 
 | Code | Contract | Name |
 |---|---|---|

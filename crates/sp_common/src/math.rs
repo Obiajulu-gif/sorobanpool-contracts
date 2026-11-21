@@ -39,6 +39,21 @@ pub fn bp_of(amount: i128, bp: u32) -> Option<i128> {
     mul_div_floor(amount, bp as i128, BPS_DENOMINATOR as i128)
 }
 
+/// Fees are charged against the supplier payable and always round down.
+pub fn round_supplier_payable(amount: i128, bp: u32) -> Option<i128> {
+    bp_of(amount, bp)
+}
+
+/// A member's proportional refund rounds up so fractional dust is not retained.
+pub fn round_member_refund(amount: i128, numerator: u32, denominator: u32) -> Option<i128> {
+    if denominator == 0 {
+        return None;
+    }
+    let product = amount.checked_mul(numerator as i128)?;
+    let divisor = denominator as i128;
+    Some(product / divisor + i128::from(product % divisor != 0))
+}
+
 /// Deterministic shortfall allocation. Members are walked in commit order with
 /// a running cumulative unit count; each gets
 /// `floor(cum_after * received / total) - floor(cum_before * received / total)`,
@@ -81,6 +96,7 @@ pub fn validate_tiers(tiers: &Vec<Tier>, moq: u32, max_units: u32) -> bool {
 #[cfg(test)]
 mod test {
     use super::*;
+    use proptest::prelude::*;
     use soroban_sdk::{vec, Env};
 
     fn tiers(env: &Env) -> Vec<Tier> {
@@ -127,6 +143,35 @@ mod test {
             }
             assert_eq!(sum, received);
         }
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(10_000))]
+        #[test]
+        fn allocation_is_bounded_and_conserves_received_units(
+            units in proptest::collection::vec(1u32..=1_000, 1..=32),
+            received in 0u32..=32_000,
+        ) {
+            let total: u32 = units.iter().sum();
+            prop_assume!(received <= total);
+            let mut cumulative = 0;
+            let mut allocated = 0;
+            for units in units {
+                let share = cumulative_alloc(cumulative, units, received, total).unwrap();
+                prop_assert!(share <= units);
+                allocated += share;
+                cumulative += units;
+            }
+            prop_assert_eq!(allocated, received);
+        }
+    }
+
+    #[test]
+    fn rounding_policy_is_explicit() {
+        assert_eq!(round_supplier_payable(101, 333), Some(3));
+        assert_eq!(round_member_refund(101, 1, 3), Some(34));
+        assert_eq!(round_member_refund(100, 1, 4), Some(25));
+        assert_eq!(round_member_refund(100, 1, 0), None);
     }
 
     #[test]

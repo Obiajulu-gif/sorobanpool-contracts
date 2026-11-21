@@ -10,8 +10,17 @@ os.makedirs(os.path.join(root, "artifacts"), exist_ok=True)
 os.makedirs(os.path.join(root, "bindings"), exist_ok=True)
 
 errors = []
+error_ranges = {
+    "config": (100, 199),
+    "registry": (200, 299),
+    "group_buy": (300, 399),
+    "disputes": (400, 499),
+    "supplier_bond": (500, 599),
+    "reputation": (600, 699),
+    "smart_wallet": (700, 799),
+}
 for f in sorted(glob.glob(os.path.join(root, "contracts/*/src/lib.rs"))):
-    contract = f.split("/")[-3]
+    contract = os.path.basename(os.path.dirname(os.path.dirname(f)))
     m = re.search(r"pub enum Error \{(.*?)\n\}", open(f).read(), re.S)
     if not m:
         continue
@@ -19,6 +28,19 @@ for f in sorted(glob.glob(os.path.join(root, "contracts/*/src/lib.rs"))):
         mm = re.match(r"\s*(\w+)\s*=\s*(\d+),", line)
         if mm:
             errors.append({"code": int(mm.group(2)), "contract": contract, "name": mm.group(1)})
+by_contract = {}
+for error in errors:
+    by_contract.setdefault(error["contract"], []).append(error)
+for contract, contract_errors in by_contract.items():
+    if contract not in error_ranges:
+        raise SystemExit(f"missing error range for contract: {contract}")
+    lo, hi = error_ranges[contract]
+    codes = [error["code"] for error in contract_errors]
+    if len(codes) != len(set(codes)):
+        raise SystemExit(f"duplicate error code in {contract}")
+    out_of_range = [code for code in codes if not lo <= code <= hi]
+    if out_of_range:
+        raise SystemExit(f"error code(s) out of range for {contract}: {out_of_range}")
 errors.sort(key=lambda e: e["code"])
 json.dump(errors, open(os.path.join(root, "artifacts/errors.json"), "w"), indent=2)
 

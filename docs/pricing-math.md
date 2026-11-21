@@ -21,7 +21,11 @@ All amounts are `i128` USDC stroops (7 decimals). Every operation is checked; ov
 - `Split(bp)`: `floor(claim × bp/10000)` to the group side, rest to supplier.
 - `RefundPool`: whole claim shared pro-rata by units (floor; remainder stays as unswept dust).
 
-**Dust.** Only the floor remainder of `RefundPool` shares can remain; `sweep_dust` sends escrow beyond `owed_total − refunds_paid` to the treasury once nothing is frozen.
+**Dust.** Only the floor remainder of `RefundPool` shares can remain; `sweep_dust` sends escrow beyond `owed_total − refunds_paid` to the treasury once nothing is frozen. Split refunds round the member share up and reduce the supplier share by the same amount, preserving conservation.
+
+**Rounding policy.** `round_supplier_payable` uses floor division for fees. `round_member_refund` uses ceiling division for proportional member dust, so a fractional refund is never retained by the contract.
+
+Worked micro-example: a 1/3 share of 101 stroops refunds 34 stroops to the member; a 333 bp supplier fee on 101 stroops is 3 stroops.
 
 ---
 
